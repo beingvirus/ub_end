@@ -1,0 +1,44 @@
+name: Ultroid Workflow
+
+on:
+    push:
+    workflow_dispatch:
+    
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+
+    steps:
+       - name: Checkout
+         uses: actions/checkout@main
+       
+       - uses: styfle/cancel-workflow-action@0.9.1
+         name: "Cancel duplicate workflow runs"
+         with:
+            all_but_latest: true
+            access_token: ${{ github.token }}
+       - name: Initiating
+         continue-on-error: true
+         run: |
+           git config --global user.name ${{ secrets.Commit_GitHubName }}
+           git config --global user.email ${{ secrets.Commit_GitHubMail }}
+           git config --global credential.helper store
+           echo "https://${{ secrets.Commit_GitHubName }}:${{ secrets.Commit_GH_TOKEN }}@github.com" > ~/.git-credentials
+       - name: Cloning the Official Repo
+         continue-on-error: true
+         run: |
+           git clone https://${{ secrets.GitHubName }}:${{ secrets.GH_TOKEN }}@${{ secrets.CREDS }} ultroid
+       - name: Running Ultroid
+         timeout-minutes: 300
+         continue-on-error: true
+         run: |
+           sudo sh action.sh
+       - name: Workflow Loop Run on Actions
+         continue-on-error: true
+         run: |
+              git clone https://github.com/${GITHUB_REPOSITORY} loop
+              cd loop || exit 1
+              echo $(date -u +%T%P) >> loop.txt
+              git add loop.txt
+              git commit -m "Workflow : Loop $(date -u +%D-%T%P)"
+              git push -q https://${{ secrets.GH_TOKEN }}@github.com/${GITHUB_REPOSITORY} HEAD:main
